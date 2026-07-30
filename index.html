@@ -274,7 +274,7 @@ document.getElementById('fileInputOdo').addEventListener('change', async (e) => 
       preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--green);font-weight:600;">✓ Đã đọc xong</div>`;
     }catch(err){
       console.error(err);
-      preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--red);font-weight:600;">AI không đọc được, nhập tay ở bước 4</div>`;
+      preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--red);font-weight:600;">Lỗi: ${String(err.message||err).slice(0,200)}</div>`;
     }
     step2.classList.add('done');
     step3.classList.add('active');
@@ -304,7 +304,7 @@ document.getElementById('fileInputBill').addEventListener('change', async (e) =>
       preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--green);font-weight:600;">✓ Đã đọc xong, kiểm tra bên dưới</div>`;
     }catch(err){
       console.error(err);
-      preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--red);font-weight:600;">AI không đọc được, nhập tay ở bước 4</div>`;
+      preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--red);font-weight:600;">Lỗi: ${String(err.message||err).slice(0,200)}</div>`;
     }
     step3.classList.add('done');
     step4.classList.add('active');
@@ -312,47 +312,25 @@ document.getElementById('fileInputBill').addEventListener('change', async (e) =>
   reader.readAsDataURL(file);
 });
 
-async function callClaude(systemPrompt, base64, mediaType){
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+async function callClaude(action, base64, mediaType){
+  const response = await fetch(APPS_SCRIPT_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 600,
-      system: systemPrompt,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text", text: "Đọc ảnh này và trả JSON theo đúng định dạng." }
-        ]
-      }]
-    })
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // tránh preflight CORS
+    body: JSON.stringify({ action, imageBase64: base64, mediaType })
   });
-  const json = await response.json();
-  const text = (json.content || []).map(b => b.text || '').join('');
-  return JSON.parse(text.replace(/```json|```/g, '').trim());
+  const result = await response.json();
+  if(result.status === 'error'){
+    throw new Error(result.message || 'Lỗi không xác định từ Apps Script');
+  }
+  return result;
 }
 
 function extractOdoData(base64, mediaType){
-  const systemPrompt = `Bạn đang đọc ảnh chụp đồng hồ công tơ mét (odometer) trên bảng táp-lô ô tô.
-Chỉ trả lời bằng JSON thuần, không thêm giải thích, không thêm markdown:
-{ "so_km": number hoặc null }
-Nếu không chắc chắn đọc đúng số, để null, đừng đoán bừa.`;
-  return callClaude(systemPrompt, base64, mediaType);
+  return callClaude('extract_odo', base64, mediaType);
 }
 
 function extractBillData(base64, mediaType){
-  const systemPrompt = `Bạn đang đọc ảnh chụp hoá đơn hoặc màn hình trụ bơm tại cây xăng.
-Chỉ trả lời bằng JSON thuần, không thêm giải thích, không thêm markdown:
-{
-  "ngay_gio": string (dd/mm/yyyy hh:mm nếu có, không thì null),
-  "so_lit": number hoặc null,
-  "so_tien": number hoặc null (VNĐ, chỉ lấy số),
-  "ten_cay_xang": string hoặc null
-}
-Nếu không chắc chắn, để null, đừng đoán bừa.`;
-  return callClaude(systemPrompt, base64, mediaType);
+  return callClaude('extract_bill', base64, mediaType);
 }
 
 document.getElementById('submitBtn').addEventListener('click', async () => {
