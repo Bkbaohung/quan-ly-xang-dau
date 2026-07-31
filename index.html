@@ -241,6 +241,31 @@ Object.keys(nhomXe).forEach(group => {
 let odoBase64 = null, odoMediaType = null;
 let billBase64 = null, billMediaType = null;
 
+// Thu nhỏ ảnh trước khi gửi đi (giảm dung lượng -> AI đọc nhanh hơn nhiều,
+// vẫn đủ nét để đọc số vì đây là ảnh chữ số/màn hình, không cần độ phân giải cao)
+function resizeImage(file, maxWidth){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if(width > maxWidth){
+        height = Math.round(height * (maxWidth / width));
+        width = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+      URL.revokeObjectURL(objectUrl);
+      resolve({ dataUrl, base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' });
+    };
+    img.onerror = reject;
+    img.src = objectUrl;
+  });
+}
+
 const step1 = document.getElementById('step1');
 const step2 = document.getElementById('step2');
 const step3 = document.getElementById('step3');
@@ -259,57 +284,53 @@ plateInput.addEventListener('change', () => {
 document.getElementById('fileInputOdo').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if(!file) return;
-  const url = URL.createObjectURL(file);
   const preview = document.getElementById('previewOdo');
   preview.style.display = 'flex';
-  preview.innerHTML = `<img src="${url}"><div class="st"><span class="spinner"></span>AI đang đọc số km...</div>`;
+  preview.innerHTML = `<div class="st"><span class="spinner"></span>Đang xử lý ảnh...</div>`;
 
-  const reader = new FileReader();
-  reader.onload = async () => {
-    odoBase64 = reader.result.split(',')[1];
-    odoMediaType = file.type;
-    try{
-      const data = await extractOdoData(odoBase64, odoMediaType);
-      document.getElementById('fOdo').value = data.so_km ?? '';
-      preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--green);font-weight:600;">✓ Đã đọc xong</div>`;
-    }catch(err){
-      console.error(err);
-      preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--red);font-weight:600;">Lỗi: ${String(err.message||err).slice(0,200)}</div>`;
-    }
-    step2.classList.add('done');
-    step3.classList.add('active');
-  };
-  reader.readAsDataURL(file);
+  try{
+    const resized = await resizeImage(file, 1200);
+    odoBase64 = resized.base64;
+    odoMediaType = resized.mediaType;
+    preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st"><span class="spinner"></span>AI đang đọc số km...</div>`;
+
+    const data = await extractOdoData(odoBase64, odoMediaType);
+    document.getElementById('fOdo').value = data.so_km ?? '';
+    preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st" style="color:var(--green);font-weight:600;">✓ Đã đọc xong</div>`;
+  }catch(err){
+    console.error(err);
+    preview.innerHTML = `<div class="st" style="color:var(--red);font-weight:600;">Lỗi: ${String(err.message||err).slice(0,200)}</div>`;
+  }
+  step2.classList.add('done');
+  step3.classList.add('active');
 });
 
 // ---- Ảnh hoá đơn / trụ bơm ----
 document.getElementById('fileInputBill').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if(!file) return;
-  const url = URL.createObjectURL(file);
   const preview = document.getElementById('previewBill');
   preview.style.display = 'flex';
-  preview.innerHTML = `<img src="${url}"><div class="st"><span class="spinner"></span>AI đang đọc hoá đơn...</div>`;
+  preview.innerHTML = `<div class="st"><span class="spinner"></span>Đang xử lý ảnh...</div>`;
 
-  const reader = new FileReader();
-  reader.onload = async () => {
-    billBase64 = reader.result.split(',')[1];
-    billMediaType = file.type;
-    try{
-      const data = await extractBillData(billBase64, billMediaType);
-      document.getElementById('fDate').value = data.ngay_gio || '';
-      document.getElementById('fLiters').value = data.so_lit ?? '';
-      document.getElementById('fAmount').value = data.so_tien ?? '';
-      document.getElementById('fStation').value = data.ten_cay_xang || '';
-      preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--green);font-weight:600;">✓ Đã đọc xong, kiểm tra bên dưới</div>`;
-    }catch(err){
-      console.error(err);
-      preview.innerHTML = `<img src="${url}"><div class="st" style="color:var(--red);font-weight:600;">Lỗi: ${String(err.message||err).slice(0,200)}</div>`;
-    }
-    step3.classList.add('done');
-    step4.classList.add('active');
-  };
-  reader.readAsDataURL(file);
+  try{
+    const resized = await resizeImage(file, 1200);
+    billBase64 = resized.base64;
+    billMediaType = resized.mediaType;
+    preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st"><span class="spinner"></span>AI đang đọc hoá đơn...</div>`;
+
+    const data = await extractBillData(billBase64, billMediaType);
+    document.getElementById('fDate').value = data.ngay_gio || '';
+    document.getElementById('fLiters').value = data.so_lit ?? '';
+    document.getElementById('fAmount').value = data.so_tien ?? '';
+    document.getElementById('fStation').value = data.ten_cay_xang || '';
+    preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st" style="color:var(--green);font-weight:600;">✓ Đã đọc xong, kiểm tra bên dưới</div>`;
+  }catch(err){
+    console.error(err);
+    preview.innerHTML = `<div class="st" style="color:var(--red);font-weight:600;">Lỗi: ${String(err.message||err).slice(0,200)}</div>`;
+  }
+  step3.classList.add('done');
+  step4.classList.add('active');
 });
 
 async function callClaude(action, base64, mediaType){
