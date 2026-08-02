@@ -179,7 +179,6 @@
   <div class="divider"></div>
 
   <div class="sectionlabel">Từ ảnh hoá đơn / trụ bơm</div>
-  <div class="field"><label class="fieldlabel">Ngày giờ</label><input type="text" id="fDate"></div>
   <div class="grid2">
     <div class="field"><label class="fieldlabel">Số lít</label><input type="text" id="fLiters"></div>
     <div class="field"><label class="fieldlabel">Số tiền (đ)</label><input type="text" id="fAmount"></div>
@@ -320,7 +319,6 @@ document.getElementById('fileInputBill').addEventListener('change', async (e) =>
     preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st"><span class="spinner"></span>AI đang đọc hoá đơn...</div>`;
 
     const data = await extractBillData(billBase64, billMediaType);
-    document.getElementById('fDate').value = data.ngay_gio || '';
     document.getElementById('fLiters').value = data.so_lit ?? '';
     document.getElementById('fAmount').value = data.so_tien ?? '';
     document.getElementById('fStation').value = data.ten_cay_xang || '';
@@ -369,7 +367,7 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
 
   const payload = {
     plate: plateInput.value.trim(),
-    date: document.getElementById('fDate').value,
+    date: '',
     odo: document.getElementById('fOdo').value,
     liters: document.getElementById('fLiters').value,
     amount: document.getElementById('fAmount').value,
