@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Nhập dữ liệu đổ xăng dầu</title>
+
+<!-- PWA: cho phép cài đặt như app thật trên điện thoại -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#16232F">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Xăng Dầu">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+  :root{
+    --navy:#16232F; --steel:#3A5A78; --amber:#E8A33D;
+    --bg:#F5F3EE; --card:#FFFFFF; --green:#4A7C59; --red:#C1553B;
+    --gray:#8B93A0; --line:#E4E0D6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); font-family:'Inter',sans-serif; color:var(--navy);
+    padding:20px 16px 60px; max-width:480px; margin:0 auto;
+  }
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--steel);margin-bottom:4px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:24px;margin:0 0 4px;letter-spacing:-.01em;}
+  .sub{color:#5B6472;font-size:13.5px;margin-bottom:20px;line-height:1.5;}
+
+  .step{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:18px; margin-bottom:14px; opacity:.45; pointer-events:none; transition:.2s;
+  }
+  .step.active{opacity:1; pointer-events:auto; border-color:#D8D2C0;}
+  .step.done{opacity:1; pointer-events:auto;}
+  .steplabel{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--steel); margin-bottom:10px; display:flex; align-items:center; gap:8px;
+  }
+  .stepnum{
+    width:20px;height:20px;border-radius:50%;background:var(--steel);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11px;flex:none;
+  }
+  .step.done .stepnum{background:var(--green);}
+
+  label.fieldlabel{display:block;font-size:12.5px;font-weight:600;color:var(--steel);margin-bottom:6px;}
+  input[type=text]{
+    width:100%; padding:13px 14px; border:1.5px solid var(--line); border-radius:10px;
+    font-size:16px; font-family:'IBM Plex Mono',monospace; background:#FBFAF7;
+  }
+  input[type=text]:focus{outline:none;border-color:var(--amber);background:#fff;}
+
+  select{
+    width:100%; padding:13px 14px; border:1.5px solid var(--line); border-radius:10px;
+    font-size:16px; font-family:'IBM Plex Mono',monospace; background:#FBFAF7;
+    color:var(--navy); appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233A5A78' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center;
+  }
+  select:focus{outline:none;border-color:var(--amber);background-color:#fff;}
+
+  .camerabtn{
+    width:100%; padding:16px; border:2px dashed #C9C2AF; border-radius:12px;
+    background:#FBFAF7; text-align:center; cursor:pointer; display:block;
+  }
+  .camerabtn svg{width:26px;height:26px;stroke:var(--steel);margin-bottom:6px;}
+  .camerabtn .t{font-weight:600;font-size:14px;}
+  .camerabtn .h{font-size:12px;color:var(--gray);margin-top:2px;}
+  input[type=file]{display:none;}
+
+  .preview{display:flex;gap:12px;align-items:center;margin-top:10px;}
+  .preview img{width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid var(--line);flex:none;}
+  .preview .st{font-size:13px;}
+  .spinner{width:13px;height:13px;border:2px solid var(--line);border-top-color:var(--steel);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .field{margin-bottom:12px;}
+  .field:last-child{margin-bottom:0;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .divider{height:1px;background:var(--line);margin:16px 0;}
+  .sectionlabel{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);font-weight:700;margin-bottom:10px;}
+
+  button.submit{
+    width:100%; background:var(--navy); color:#fff; border:none; padding:15px;
+    border-radius:11px; font-weight:700; font-size:15px; cursor:pointer; margin-top:16px;
+  }
+  button.submit:disabled{background:var(--gray);}
+  button.submit:active{background:#0F1A24;}
+
+  .toast{
+    margin-top:14px; padding:12px 14px; border-radius:10px; font-size:13.5px; font-weight:600;
+    display:none;
+  }
+  .toast.ok{display:block;background:#EAF3EC;color:var(--green);}
+  .toast.err{display:block;background:#FBEAE5;color:var(--red);}
+
+  .resetlink{
+    text-align:center;margin-top:18px;font-size:13px;color:var(--steel);text-decoration:underline;cursor:pointer;
+  }
+
+  .installbar{
+    display:none;
+    background:var(--navy); color:#fff; border-radius:14px; padding:14px 16px;
+    margin-bottom:16px; align-items:center; gap:12px; font-size:13px; line-height:1.5;
+  }
+  .installbar.show{display:flex;}
+  .installbar .ic{font-size:20px;flex:none;}
+  .installbar .txt{flex:1;}
+  .installbar b{color:var(--amber);}
+  .installbar button{
+    background:var(--amber); color:var(--navy); border:none; padding:8px 14px;
+    border-radius:8px; font-weight:700; font-size:12.5px; cursor:pointer; flex:none;
+  }
+  .installbar .close{
+    background:none;border:none;color:#8B93A0;font-size:16px;cursor:pointer;padding:0 2px;flex:none;
+  }
+</style>
+</head>
+<body>
+
+<!-- BANNER CÀI ĐẶT APP — hiển thị bất kể đã nhập PIN hay chưa -->
+<div class="installbar" id="installBarAndroid">
+  <span class="ic">📲</span>
+  <span class="txt">Cài đặt app này lên điện thoại để mở nhanh hơn, không cần mở trình duyệt.</span>
+  <button id="installBtn">Cài đặt</button>
+  <button class="close" id="closeInstallAndroid">✕</button>
+</div>
+
+<div class="installbar" id="installBarIOS">
+  <span class="ic">📲</span>
+  <span class="txt">Để cài app: bấm nút <b>Chia sẻ</b> ở Safari, sau đó chọn <b>"Thêm vào MH chính"</b>.</span>
+  <button class="close" id="closeInstallIOS">✕</button>
+</div>
+
+<!-- MÀN HÌNH NHẬP PIN — chỉ hiện lần đầu, điện thoại tự nhớ cho lần sau -->
+<div id="pinGate" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;padding:24px;">
+  <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px;">🔒 Nhập mã bảo mật</div>
+  <div style="font-size:13.5px;color:#5B6472;text-align:center;margin-bottom:20px;max-width:320px;">Nhập mã bảo mật được công ty cung cấp để sử dụng app này lần đầu tiên trên máy này.</div>
+  <div style="position:relative;width:260px;margin-bottom:12px;">
+    <input type="password" id="pinInput" maxlength="32" placeholder="Nhập mã bảo mật" autocomplete="off"
+      autocapitalize="off" autocorrect="off" spellcheck="false"
+      style="width:100%;box-sizing:border-box;text-align:center;font-size:17px;font-family:'IBM Plex Mono',monospace;padding:14px 44px 14px 14px;border:1.5px solid var(--line);border-radius:12px;background:#FBFAF7;">
+    <button type="button" id="pinToggleBtn" title="Hiện/ẩn mã"
+      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:17px;padding:6px;color:var(--steel);">👁️</button>
+  </div>
+  <button id="pinSubmitBtn" style="width:200px;background:var(--navy);color:#fff;border:none;padding:13px;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">Xác nhận</button>
+  <div id="pinError" style="color:var(--red);font-size:13px;font-weight:600;margin-top:12px;display:none;max-width:280px;text-align:center;"></div>
+</div>
+
+<!-- NỘI DUNG APP THẬT — chỉ hiện sau khi nhập đúng PIN -->
+<div id="mainApp" style="display:none;">
+
+<div class="eyebrow">Đội xe · Ghi nhận đổ xăng dầu</div>
+<h1>Chụp ảnh & gửi dữ liệu</h1>
+<div class="sub">Nhập biển số, chụp trực tiếp 2 ảnh: công tơ mét trên xe và hoá đơn/trụ bơm tại cây xăng — hệ thống chỉ nhận ảnh chụp ngay lúc này, không nhận ảnh có sẵn trong máy.</div>
+
+<!-- STEP 1: BIEN SO -->
+<div class="step active" id="step1">
+  <div class="steplabel"><span class="stepnum">1</span> Chọn xe</div>
+  <select id="plateInput">
+    <option value="" disabled selected>-- Chọn biển số xe --</option>
+  </select>
+</div>
+
+<!-- STEP 2: ANH CONG TO MET -->
+<div class="step" id="step2">
+  <div class="steplabel"><span class="stepnum">2</span> Chụp ảnh công tơ mét trên xe</div>
+  <label class="camerabtn" id="cameraBtnOdo">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 012-2h1.2a2 2 0 001.6-.8l.6-.8a2 2 0 011.6-.8h1.6a2 2 0 011.6.8l.6.8a2 2 0 001.6.8H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="3.2"/></svg>
+    <div class="t">Mở camera — chụp đồng hồ km</div>
+    <div class="h">Bắt buộc chụp trực tiếp, không chọn ảnh cũ</div>
+    <input type="file" id="fileInputOdo" accept="image/*" capture="environment">
+  </label>
+  <div class="preview" id="previewOdo" style="display:none;"></div>
+</div>
+
+<!-- STEP 3: ANH HOA DON -->
+<div class="step" id="step3">
+  <div class="steplabel"><span class="stepnum">3</span> Chụp ảnh hoá đơn / trụ bơm tại cây xăng</div>
+  <label class="camerabtn" id="cameraBtnBill">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 012-2h1.2a2 2 0 001.6-.8l.6-.8a2 2 0 011.6-.8h1.6a2 2 0 011.6.8l.6.8a2 2 0 001.6.8H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="3.2"/></svg>
+    <div class="t">Mở camera — chụp hoá đơn/trụ bơm</div>
+    <div class="h">Bắt buộc chụp trực tiếp, không chọn ảnh cũ</div>
+    <input type="file" id="fileInputBill" accept="image/*" capture="environment">
+  </label>
+  <div class="preview" id="previewBill" style="display:none;"></div>
+</div>
+
+<!-- STEP 4: XAC NHAN -->
+<div class="step" id="step4">
+  <div class="steplabel"><span class="stepnum">4</span> Kiểm tra dữ liệu AI đọc được</div>
+
+  <div class="sectionlabel">Từ ảnh công tơ mét</div>
+  <div class="field"><label class="fieldlabel">Số km</label><input type="text" id="fOdo"></div>
+
+  <div class="divider"></div>
+
+  <div class="sectionlabel">Từ ảnh hoá đơn / trụ bơm</div>
+  <div class="grid2">
+    <div class="field"><label class="fieldlabel">Số lít</label><input type="text" id="fLiters"></div>
+    <div class="field"><label class="fieldlabel">Số tiền (đ)</label><input type="text" id="fAmount"></div>
+  </div>
+  <div class="field"><label class="fieldlabel">Cây xăng</label><input type="text" id="fStation"></div>
+
+  <button class="submit" id="submitBtn">Gửi dữ liệu</button>
+  <div class="toast" id="toast"></div>
+</div>
+
+<div class="resetlink" id="resetLink" style="display:none;">↺ Nhập lượt mới</div>
+
+</div><!-- đóng #mainApp -->
+
+<script>
+// ============ CẤU HÌNH: DÁN URL WEB APP CỦA GOOGLE APPS SCRIPT VÀO ĐÂY ============
+const APPS_SCRIPT_URL = "DÁN_URL_DEPLOY_APPS_SCRIPT_VÀO_ĐÂY";
+// ===================================================================================
+
+// ====== KIỂM TRA MÃ PIN (chỉ hỏi 1 lần/điện thoại, PIN thật được kiểm tra bí mật ở Apps Script) ======
+const PIN_STORAGE_KEY = 'xangdau_pin_verified_v1';
+const PIN_VALUE_KEY = 'xangdau_pin_value_v1';
+const PIN_FAIL_COUNT_KEY = 'xangdau_pin_fail_count';
+const PIN_LOCK_UNTIL_KEY = 'xangdau_pin_lock_until';
+const MAX_PIN_ATTEMPTS = 5;
+const LOCK_MINUTES = 10;
+
+const pinGate = document.getElementById('pinGate');
+const mainApp = document.getElementById('mainApp');
+const pinInput = document.getElementById('pinInput');
+const pinSubmitBtn = document.getElementById('pinSubmitBtn');
+const pinError = document.getElementById('pinError');
+
+function showApp(){
+  pinGate.style.display = 'none';
+  mainApp.style.display = 'block';
+}
+
+function getLockRemainingMs(){
+  const lockUntil = parseInt(localStorage.getItem(PIN_LOCK_UNTIL_KEY) || '0', 10);
+  return lockUntil - Date.now();
+}
+
+function applyLockUI(){
+  const remaining = getLockRemainingMs();
+  if(remaining > 0){
+    const minutes = Math.ceil(remaining / 60000);
+    pinInput.disabled = true;
+    pinSubmitBtn.disabled = true;
+    pinError.style.color = 'var(--red)';
+    pinError.textContent = `Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau khoảng ${minutes} phút.`;
+    pinError.style.display = 'block';
+    setTimeout(() => {
+      pinInput.disabled = false;
+      pinSubmitBtn.disabled = false;
+      pinError.style.display = 'none';
+      localStorage.removeItem(PIN_LOCK_UNTIL_KEY);
+      localStorage.removeItem(PIN_FAIL_COUNT_KEY);
+    }, remaining);
+    return true;
+  }
+  return false;
+}
+
+if(localStorage.getItem(PIN_STORAGE_KEY) === 'true'){
+  showApp();
+} else {
+  if(!applyLockUI()){
+    pinInput.focus();
+  }
+}
+
+async function submitPin(){
+  if(applyLockUI()) return;
+
+  const pin = pinInput.value.trim();
+  if(!pin){ return; }
+  pinSubmitBtn.disabled = true;
+  pinSubmitBtn.textContent = 'Đang kiểm tra...';
+  pinError.style.display = 'none';
+
+  try{
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'verify_pin', pin })
+    });
+    const result = await response.json();
+    if(result.status === 'ok'){
+      localStorage.removeItem(PIN_FAIL_COUNT_KEY);
+      localStorage.removeItem(PIN_LOCK_UNTIL_KEY);
+      localStorage.setItem(PIN_STORAGE_KEY, 'true');
+      localStorage.setItem(PIN_VALUE_KEY, pin);
+      showApp();
+    } else {
+      const failCount = parseInt(localStorage.getItem(PIN_FAIL_COUNT_KEY) || '0', 10) + 1;
+      localStorage.setItem(PIN_FAIL_COUNT_KEY, String(failCount));
+
+      if(failCount >= MAX_PIN_ATTEMPTS){
+        const lockUntil = Date.now() + LOCK_MINUTES * 60000;
+        localStorage.setItem(PIN_LOCK_UNTIL_KEY, String(lockUntil));
+        applyLockUI();
+      } else {
+        const remaining = MAX_PIN_ATTEMPTS - failCount;
+        pinError.style.color = 'var(--red)';
+        pinError.textContent = `Sai mã bảo mật. Còn ${remaining} lần thử trước khi bị khoá tạm.`;
+        pinError.style.display = 'block';
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    }
+  }catch(err){
+    pinError.style.color = 'var(--red)';
+    pinError.textContent = 'Lỗi kết nối, kiểm tra mạng và thử lại.';
+    pinError.style.display = 'block';
+  }
+  pinSubmitBtn.disabled = false;
+  pinSubmitBtn.textContent = 'Xác nhận';
+}
+
+pinSubmitBtn.addEventListener('click', submitPin);
+pinInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitPin(); });
+
+document.getElementById('pinToggleBtn').addEventListener('click', () => {
+  const btn = document.getElementById('pinToggleBtn');
+  if(pinInput.type === 'password'){
+    pinInput.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    pinInput.type = 'password';
+    btn.textContent = '👁️';
+  }
+});
+
+// ============ CẤU HÌNH: DANH SÁCH XE — SỬA Ở ĐÂY KHI CÓ XE MỚI/BỚT XE ============
+// Mỗi dòng là 1 xe: "Biển số - Tên/loại xe" (phần tên là tuỳ chọn, có thể để trống)
+const DANH_SACH_XE = [
+  { plate: "30H-26868", label: "30H-26868", group: "Xe con" },
+  { plate: "30B-86879", label: "30B-86879", group: "Xe con" },
+  { plate: "30A-97777", label: "30A-97777", group: "Xe con" },
+  { plate: "30A-27777", label: "30A-27777", group: "Xe con" },
+  { plate: "17A-22296", label: "17A-22296", group: "Xe con" },
+  { plate: "17A-33527", label: "17A-33527", group: "Xe con" },
+  { plate: "17A-33537", label: "17A-33537", group: "Xe con" },
+  { plate: "17A-14588", label: "17A-14588", group: "Xe con" },
+  { plate: "17C-13636", label: "17C-13636", group: "Xe con" },
+  { plate: "17C-17316", label: "17C-17316", group: "Xe con" },
+  { plate: "17C-17346", label: "17C-17346", group: "Xe con" },
+  { plate: "17H-00793", label: "17H-00793", group: "Xe tải" },
+  { plate: "17H-00894", label: "17H-00894", group: "Xe tải" },
+  { plate: "17H-01425", label: "17H-01425", group: "Xe tải" },
+  { plate: "17C-11230", label: "17C-11230", group: "Xe tải" },
+  { plate: "17H-06064", label: "17H-06064", group: "Xe tải" },
+  { plate: "17H-06062", label: "17H-06062", group: "Xe tải" },
+];
+// ===================================================================================
+
+const plateInput = document.getElementById('plateInput');
+const nhomXe = {};
+DANH_SACH_XE.forEach(xe => {
+  if(!nhomXe[xe.group]) nhomXe[xe.group] = [];
+  nhomXe[xe.group].push(xe);
+});
+Object.keys(nhomXe).forEach(group => {
+  const optgroup = document.createElement('optgroup');
+  optgroup.label = group;
+  nhomXe[group].forEach(xe => {
+    const opt = document.createElement('option');
+    opt.value = xe.plate;
+    opt.textContent = xe.label;
+    optgroup.appendChild(opt);
+  });
+  plateInput.appendChild(optgroup);
+});
+
+let odoBase64 = null, odoMediaType = null;
+let billBase64 = null, billMediaType = null;
+
+// Thu nhỏ ảnh trước khi gửi đi (giảm dung lượng -> AI đọc nhanh hơn nhiều,
+// vẫn đủ nét để đọc số vì đây là ảnh chữ số/màn hình, không cần độ phân giải cao)
+function resizeImage(file, maxWidth){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      let { width, height } = img;
+      if(width > maxWidth){
+        height = Math.round(height * (maxWidth / width));
+        width = maxWidth;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+      URL.revokeObjectURL(objectUrl);
+      resolve({ dataUrl, base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' });
+    };
+    img.onerror = reject;
+    img.src = objectUrl;
+  });
+}
+
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const step3 = document.getElementById('step3');
+const step4 = document.getElementById('step4');
+const toast = document.getElementById('toast');
+const resetLink = document.getElementById('resetLink');
+
+plateInput.addEventListener('change', () => {
+  if(plateInput.value){
+    step1.classList.add('done');
+    step2.classList.add('active');
+  }
+});
+
+// ---- Ảnh công tơ mét ----
+document.getElementById('fileInputOdo').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const preview = document.getElementById('previewOdo');
+  preview.style.display = 'flex';
+  preview.innerHTML = `<div class="st"><span class="spinner"></span>Đang xử lý ảnh...</div>`;
+
+  try{
+    const resized = await resizeImage(file, 1200);
+    odoBase64 = resized.base64;
+    odoMediaType = resized.mediaType;
+    preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st"><span class="spinner"></span>AI đang đọc số km...</div>`;
+
+    const data = await extractOdoData(odoBase64, odoMediaType);
+    document.getElementById('fOdo').value = data.so_km ?? '';
+    preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st" style="color:var(--green);font-weight:600;">✓ Đã đọc xong</div>`;
+  }catch(err){
+    console.error(err);
+    preview.innerHTML = `<div class="st" style="color:var(--red);font-weight:600;">Lỗi: ${String(err.message||err).slice(0,200)}</div>`;
+  }
+  step2.classList.add('done');
+  step3.classList.add('active');
+});
+
+// ---- Ảnh hoá đơn / trụ bơm ----
+document.getElementById('fileInputBill').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  const preview = document.getElementById('previewBill');
+  preview.style.display = 'flex';
+  preview.innerHTML = `<div class="st"><span class="spinner"></span>Đang xử lý ảnh...</div>`;
+
+  try{
+    const resized = await resizeImage(file, 1200);
+    billBase64 = resized.base64;
+    billMediaType = resized.mediaType;
+    preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st"><span class="spinner"></span>AI đang đọc hoá đơn...</div>`;
+
+    const data = await extractBillData(billBase64, billMediaType);
+    document.getElementById('fLiters').value = data.so_lit ?? '';
+    document.getElementById('fAmount').value = data.so_tien ?? '';
+    document.getElementById('fStation').value = data.ten_cay_xang || '';
+    preview.innerHTML = `<img src="${resized.dataUrl}"><div class="st" style="color:var(--green);font-weight:600;">✓ Đã đọc xong, kiểm tra bên dưới</div>`;
+  }catch(err){
+    console.error(err);
+    preview.innerHTML = `<div class="st" style="color:var(--red);font-weight:600;">Lỗi: ${String(err.message||err).slice(0,200)}</div>`;
+  }
+  step3.classList.add('done');
+  step4.classList.add('active');
+});
+
+async function callClaude(action, base64, mediaType){
+  const response = await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // tránh preflight CORS
+    body: JSON.stringify({ action, imageBase64: base64, mediaType, pin: localStorage.getItem(PIN_VALUE_KEY) })
+  });
+  const result = await response.json();
+  if(result.status === 'error'){
+    throw new Error(result.message || 'Lỗi không xác định từ Apps Script');
+  }
+  return result;
+}
+
+function extractOdoData(base64, mediaType){
+  return callClaude('extract_odo', base64, mediaType);
+}
+
+function extractBillData(base64, mediaType){
+  return callClaude('extract_bill', base64, mediaType);
+}
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('submitBtn');
+  if(!odoBase64 || !billBase64){
+    showToast('err', 'Bạn cần chụp đủ cả 2 ảnh (công tơ mét và hoá đơn) trước khi gửi.');
+    return;
+  }
+  if(APPS_SCRIPT_URL.includes('DÁN_URL')){
+    showToast('err', 'Chưa cấu hình địa chỉ Google Apps Script trong file (xem hướng dẫn đi kèm).');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Đang gửi...';
+
+  const payload = {
+    plate: plateInput.value.trim(),
+    date: '',
+    odo: document.getElementById('fOdo').value,
+    liters: document.getElementById('fLiters').value,
+    amount: document.getElementById('fAmount').value,
+    station: document.getElementById('fStation').value,
+    odoImageBase64: odoBase64,
+    odoMediaType: odoMediaType,
+    billImageBase64: billBase64,
+    billMediaType: billMediaType,
+    pin: localStorage.getItem(PIN_VALUE_KEY)
+  };
+
+  try{
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // tránh preflight CORS với Apps Script
+      body: JSON.stringify(payload)
+    });
+    showToast('ok', '✓ Đã gửi thành công! Dữ liệu đã vào Google Sheet.');
+    resetLink.style.display = 'block';
+    btn.style.display = 'none';
+  }catch(err){
+    console.error(err);
+    showToast('err', 'Gửi thất bại, kiểm tra kết nối mạng và thử lại.');
+    btn.disabled = false;
+    btn.textContent = 'Gửi dữ liệu';
+  }
+});
+
+function showToast(type, msg){
+  toast.className = 'toast ' + type;
+  toast.textContent = msg;
+}
+
+resetLink.addEventListener('click', () => location.reload());
+
+// ====== PWA: đăng ký service worker + banner cài đặt ======
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js').catch(() => {});
+}
+
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || window.navigator.standalone === true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+let deferredPrompt = null;
+const barAndroid = document.getElementById('installBarAndroid');
+const barIOS = document.getElementById('installBarIOS');
+
+if (!isStandalone) {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    barAndroid.classList.add('show');
+  });
+
+  if (isIOS) {
+    barIOS.classList.add('show');
+  }
+}
+
+document.getElementById('installBtn')?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  barAndroid.classList.remove('show');
+});
+document.getElementById('closeInstallAndroid')?.addEventListener('click', () => barAndroid.classList.remove('show'));
+document.getElementById('closeInstallIOS')?.addEventListener('click', () => barIOS.classList.remove('show'));
+</script>
+</body>
+</html>
