@@ -135,13 +135,13 @@
 </div>
 
 <!-- MÀN HÌNH NHẬP PIN — chỉ hiện lần đầu, điện thoại tự nhớ cho lần sau -->
-<div id="pinGate" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;padding:24px;">
+<div id="pinGate" style="display:flex;align-items:center;justify-content:center;flex-direction:column;padding:60px 24px 24px;">
   <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px;">🔒 Nhập mã bảo mật</div>
   <div style="font-size:13.5px;color:#5B6472;text-align:center;margin-bottom:20px;max-width:320px;">Nhập mã bảo mật được công ty cung cấp để sử dụng app này lần đầu tiên trên máy này.</div>
   <div style="position:relative;width:260px;margin-bottom:12px;">
-    <input type="password" id="pinInput" maxlength="32" placeholder="Nhập mã bảo mật" autocomplete="off"
+    <input type="text" id="pinInput" maxlength="32" placeholder="Nhập mã bảo mật" autocomplete="off"
       autocapitalize="off" autocorrect="off" spellcheck="false"
-      style="width:100%;box-sizing:border-box;text-align:center;font-size:17px;font-family:'IBM Plex Mono',monospace;padding:14px 44px 14px 14px;border:1.5px solid var(--line);border-radius:12px;background:#FBFAF7;">
+      style="width:100%;box-sizing:border-box;text-align:center;font-size:17px;font-family:'IBM Plex Mono',monospace;padding:14px 44px 14px 14px;border:1.5px solid var(--line);border-radius:12px;background:#FBFAF7;-webkit-text-security:disc;">
     <button type="button" id="pinToggleBtn" title="Hiện/ẩn mã"
       style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:17px;padding:6px;color:var(--steel);">👁️</button>
   </div>
@@ -311,7 +311,7 @@ async function submitPin(){
     }
   }catch(err){
     pinError.style.color = 'var(--red)';
-    pinError.textContent = 'Lỗi kết nối, kiểm tra mạng và thử lại.';
+    pinError.textContent = 'Lỗi: ' + String(err.message || err).slice(0, 200);
     pinError.style.display = 'block';
   }
   pinSubmitBtn.disabled = false;
@@ -323,11 +323,11 @@ pinInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitPin();
 
 document.getElementById('pinToggleBtn').addEventListener('click', () => {
   const btn = document.getElementById('pinToggleBtn');
-  if(pinInput.type === 'password'){
-    pinInput.type = 'text';
+  if(pinInput.style.webkitTextSecurity === 'disc'){
+    pinInput.style.webkitTextSecurity = 'none';
     btn.textContent = '🙈';
   } else {
-    pinInput.type = 'password';
+    pinInput.style.webkitTextSecurity = 'disc';
     btn.textContent = '👁️';
   }
 });
