@@ -120,6 +120,7 @@
 </head>
 <body>
 
+<!-- BANNER CÀI ĐẶT APP — hiển thị bất kể đã nhập PIN hay chưa -->
 <div class="installbar" id="installBarAndroid">
   <span class="ic">📲</span>
   <span class="txt">Cài đặt app này lên điện thoại để mở nhanh hơn, không cần mở trình duyệt.</span>
@@ -132,6 +133,19 @@
   <span class="txt">Để cài app: bấm nút <b>Chia sẻ</b> ở Safari, sau đó chọn <b>"Thêm vào MH chính"</b>.</span>
   <button class="close" id="closeInstallIOS">✕</button>
 </div>
+
+<!-- MÀN HÌNH NHẬP PIN — chỉ hiện lần đầu, điện thoại tự nhớ cho lần sau -->
+<div id="pinGate" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;padding:24px;">
+  <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px;">🔒 Nhập mã PIN</div>
+  <div style="font-size:13.5px;color:#5B6472;text-align:center;margin-bottom:20px;max-width:320px;">Nhập mã PIN được công ty cung cấp để sử dụng app này lần đầu tiên trên máy này.</div>
+  <input type="tel" id="pinInput" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off"
+    style="width:200px;text-align:center;letter-spacing:8px;font-size:22px;font-family:'IBM Plex Mono',monospace;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:#FBFAF7;margin-bottom:12px;">
+  <button id="pinSubmitBtn" style="width:200px;background:var(--navy);color:#fff;border:none;padding:13px;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">Xác nhận</button>
+  <div id="pinError" style="color:var(--red);font-size:13px;font-weight:600;margin-top:12px;display:none;"></div>
+</div>
+
+<!-- NỘI DUNG APP THẬT — chỉ hiện sau khi nhập đúng PIN -->
+<div id="mainApp" style="display:none;">
 
 <div class="eyebrow">Đội xe · Ghi nhận đổ xăng dầu</div>
 <h1>Chụp ảnh & gửi dữ liệu</h1>
@@ -191,10 +205,116 @@
 
 <div class="resetlink" id="resetLink" style="display:none;">↺ Nhập lượt mới</div>
 
+</div><!-- đóng #mainApp -->
+
 <script>
 // ============ CẤU HÌNH: DÁN URL WEB APP CỦA GOOGLE APPS SCRIPT VÀO ĐÂY ============
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxoFZPWSugW8leHE4XzKiybCgOUWulPKGlg-XHxmrOcMjFAtkay0KNKL_uvcUiQrsuq/exec";
+const APPS_SCRIPT_URL = "DÁN_URL_DEPLOY_APPS_SCRIPT_VÀO_ĐÂY";
 // ===================================================================================
+
+// ====== KIỂM TRA MÃ PIN (chỉ hỏi 1 lần/điện thoại, PIN thật được kiểm tra bí mật ở Apps Script) ======
+const PIN_STORAGE_KEY = 'xangdau_pin_verified_v1';
+const PIN_VALUE_KEY = 'xangdau_pin_value_v1';
+const PIN_FAIL_COUNT_KEY = 'xangdau_pin_fail_count';
+const PIN_LOCK_UNTIL_KEY = 'xangdau_pin_lock_until';
+const MAX_PIN_ATTEMPTS = 5;
+const LOCK_MINUTES = 10;
+
+const pinGate = document.getElementById('pinGate');
+const mainApp = document.getElementById('mainApp');
+const pinInput = document.getElementById('pinInput');
+const pinSubmitBtn = document.getElementById('pinSubmitBtn');
+const pinError = document.getElementById('pinError');
+
+function showApp(){
+  pinGate.style.display = 'none';
+  mainApp.style.display = 'block';
+}
+
+function getLockRemainingMs(){
+  const lockUntil = parseInt(localStorage.getItem(PIN_LOCK_UNTIL_KEY) || '0', 10);
+  return lockUntil - Date.now();
+}
+
+function applyLockUI(){
+  const remaining = getLockRemainingMs();
+  if(remaining > 0){
+    const minutes = Math.ceil(remaining / 60000);
+    pinInput.disabled = true;
+    pinSubmitBtn.disabled = true;
+    pinError.style.color = 'var(--red)';
+    pinError.textContent = `Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau khoảng ${minutes} phút.`;
+    pinError.style.display = 'block';
+    setTimeout(() => {
+      pinInput.disabled = false;
+      pinSubmitBtn.disabled = false;
+      pinError.style.display = 'none';
+      localStorage.removeItem(PIN_LOCK_UNTIL_KEY);
+      localStorage.removeItem(PIN_FAIL_COUNT_KEY);
+    }, remaining);
+    return true;
+  }
+  return false;
+}
+
+if(localStorage.getItem(PIN_STORAGE_KEY) === 'true'){
+  showApp();
+} else {
+  if(!applyLockUI()){
+    pinInput.focus();
+  }
+}
+
+async function submitPin(){
+  if(applyLockUI()) return;
+
+  const pin = pinInput.value.trim();
+  if(!pin){ return; }
+  pinSubmitBtn.disabled = true;
+  pinSubmitBtn.textContent = 'Đang kiểm tra...';
+  pinError.style.display = 'none';
+
+  try{
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'verify_pin', pin })
+    });
+    const result = await response.json();
+    if(result.status === 'ok'){
+      localStorage.removeItem(PIN_FAIL_COUNT_KEY);
+      localStorage.removeItem(PIN_LOCK_UNTIL_KEY);
+      localStorage.setItem(PIN_STORAGE_KEY, 'true');
+      localStorage.setItem(PIN_VALUE_KEY, pin);
+      showApp();
+    } else {
+      const failCount = parseInt(localStorage.getItem(PIN_FAIL_COUNT_KEY) || '0', 10) + 1;
+      localStorage.setItem(PIN_FAIL_COUNT_KEY, String(failCount));
+
+      if(failCount >= MAX_PIN_ATTEMPTS){
+        const lockUntil = Date.now() + LOCK_MINUTES * 60000;
+        localStorage.setItem(PIN_LOCK_UNTIL_KEY, String(lockUntil));
+        applyLockUI();
+      } else {
+        const remaining = MAX_PIN_ATTEMPTS - failCount;
+        pinError.style.color = 'var(--red)';
+        pinError.textContent = `Sai mã PIN. Còn ${remaining} lần thử trước khi bị khoá tạm.`;
+        pinError.style.display = 'block';
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    }
+  }catch(err){
+    pinError.style.color = 'var(--red)';
+    pinError.textContent = 'Lỗi kết nối, kiểm tra mạng và thử lại.';
+    pinError.style.display = 'block';
+  }
+  pinSubmitBtn.disabled = false;
+  pinSubmitBtn.textContent = 'Xác nhận';
+}
+
+pinSubmitBtn.addEventListener('click', submitPin);
+pinInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitPin(); });
 
 // ============ CẤU HÌNH: DANH SÁCH XE — SỬA Ở ĐÂY KHI CÓ XE MỚI/BỚT XE ============
 // Mỗi dòng là 1 xe: "Biển số - Tên/loại xe" (phần tên là tuỳ chọn, có thể để trống)
@@ -335,7 +455,7 @@ async function callClaude(action, base64, mediaType){
   const response = await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" }, // tránh preflight CORS
-    body: JSON.stringify({ action, imageBase64: base64, mediaType })
+    body: JSON.stringify({ action, imageBase64: base64, mediaType, pin: localStorage.getItem(PIN_VALUE_KEY) })
   });
   const result = await response.json();
   if(result.status === 'error'){
@@ -375,7 +495,8 @@ document.getElementById('submitBtn').addEventListener('click', async () => {
     odoImageBase64: odoBase64,
     odoMediaType: odoMediaType,
     billImageBase64: billBase64,
-    billMediaType: billMediaType
+    billMediaType: billMediaType,
+    pin: localStorage.getItem(PIN_VALUE_KEY)
   };
 
   try{
