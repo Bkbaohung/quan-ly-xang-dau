@@ -136,12 +136,17 @@
 
 <!-- MÀN HÌNH NHẬP PIN — chỉ hiện lần đầu, điện thoại tự nhớ cho lần sau -->
 <div id="pinGate" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;padding:24px;">
-  <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px;">🔒 Nhập mã PIN</div>
-  <div style="font-size:13.5px;color:#5B6472;text-align:center;margin-bottom:20px;max-width:320px;">Nhập mã PIN được công ty cung cấp để sử dụng app này lần đầu tiên trên máy này.</div>
-  <input type="tel" id="pinInput" inputmode="numeric" maxlength="8" placeholder="••••" autocomplete="off"
-    style="width:200px;text-align:center;letter-spacing:8px;font-size:22px;font-family:'IBM Plex Mono',monospace;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:#FBFAF7;margin-bottom:12px;">
+  <div style="font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px;">🔒 Nhập mã bảo mật</div>
+  <div style="font-size:13.5px;color:#5B6472;text-align:center;margin-bottom:20px;max-width:320px;">Nhập mã bảo mật được công ty cung cấp để sử dụng app này lần đầu tiên trên máy này.</div>
+  <div style="position:relative;width:260px;margin-bottom:12px;">
+    <input type="password" id="pinInput" maxlength="32" placeholder="Nhập mã bảo mật" autocomplete="off"
+      autocapitalize="off" autocorrect="off" spellcheck="false"
+      style="width:100%;box-sizing:border-box;text-align:center;font-size:17px;font-family:'IBM Plex Mono',monospace;padding:14px 44px 14px 14px;border:1.5px solid var(--line);border-radius:12px;background:#FBFAF7;">
+    <button type="button" id="pinToggleBtn" title="Hiện/ẩn mã"
+      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:17px;padding:6px;color:var(--steel);">👁️</button>
+  </div>
   <button id="pinSubmitBtn" style="width:200px;background:var(--navy);color:#fff;border:none;padding:13px;border-radius:11px;font-weight:700;font-size:14px;cursor:pointer;">Xác nhận</button>
-  <div id="pinError" style="color:var(--red);font-size:13px;font-weight:600;margin-top:12px;display:none;"></div>
+  <div id="pinError" style="color:var(--red);font-size:13px;font-weight:600;margin-top:12px;display:none;max-width:280px;text-align:center;"></div>
 </div>
 
 <!-- NỘI DUNG APP THẬT — chỉ hiện sau khi nhập đúng PIN -->
@@ -298,7 +303,7 @@ async function submitPin(){
       } else {
         const remaining = MAX_PIN_ATTEMPTS - failCount;
         pinError.style.color = 'var(--red)';
-        pinError.textContent = `Sai mã PIN. Còn ${remaining} lần thử trước khi bị khoá tạm.`;
+        pinError.textContent = `Sai mã bảo mật. Còn ${remaining} lần thử trước khi bị khoá tạm.`;
         pinError.style.display = 'block';
         pinInput.value = '';
         pinInput.focus();
@@ -315,6 +320,17 @@ async function submitPin(){
 
 pinSubmitBtn.addEventListener('click', submitPin);
 pinInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') submitPin(); });
+
+document.getElementById('pinToggleBtn').addEventListener('click', () => {
+  const btn = document.getElementById('pinToggleBtn');
+  if(pinInput.type === 'password'){
+    pinInput.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    pinInput.type = 'password';
+    btn.textContent = '👁️';
+  }
+});
 
 // ============ CẤU HÌNH: DANH SÁCH XE — SỬA Ở ĐÂY KHI CÓ XE MỚI/BỚT XE ============
 // Mỗi dòng là 1 xe: "Biển số - Tên/loại xe" (phần tên là tuỳ chọn, có thể để trống)
